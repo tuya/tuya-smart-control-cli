@@ -1,0 +1,30 @@
+{
+  "name": "@tuya/cli",
+  "version": "0.1.0",
+  "description": "The official CLI for Tuya Smart Control - manage smart home devices from terminal",
+  "type": "module",
+  "bin": {
+    "tuya": "./bin/tuya.js"
+  },
+  "scripts": {
+    "start": "node bin/tuya.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "inquirer": "^12.6.0",
+    "ora": "^8.2.0"
+  },
+  "keywords": [
+    "tuya",
+    "smart-home",
+    "iot",
+    "cli",
+    "device-control"
+  ],
+  "license": "MIT"
+}
