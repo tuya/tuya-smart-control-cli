@@ -436,4 +436,4 @@ tuya-smart-control-cli/
 
 ## License
 
-[MIT](LICENSE)
+MIT

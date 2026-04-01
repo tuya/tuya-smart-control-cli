@@ -436,4 +436,4 @@ tuya-smart-control-cli/
 
 ## 开源协议
 
-[MIT](LICENSE)
+MIT
