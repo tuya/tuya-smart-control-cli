@@ -79,6 +79,7 @@ tuya <command> [subcommand] [options]
   weather <lat> <lon>            查询天气信息
   notify                         发送通知（仅限自发自收）
   stats                          数据统计
+  ipc                            IPC 摄像头云端抓拍
 
 全局选项:
   -V, --version                  显示版本号
@@ -280,6 +281,54 @@ tuya stats data 0620068884f3eb414579 ele_usage SUM 2025033100 2025033123
 
 ---
 
+### `tuya ipc` -- IPC 摄像头云端抓拍
+
+```bash
+# 从摄像头拍摄快照
+tuya ipc pic <device_id>
+
+# 拍摄多张快照
+tuya ipc pic <device_id> --count 3
+
+# 不解密（获取原始预签名 URL）
+tuya ipc pic <device_id> --no-consent
+
+# 录制短视频（默认 10 秒）
+tuya ipc video <device_id>
+
+# 录制 5 秒视频
+tuya ipc video <device_id> -d 5
+
+# 指定家庭 ID
+tuya ipc pic <device_id> --home <home_id>
+```
+
+**示例 - 拍摄快照：**
+
+```bash
+$ tuya ipc pic 6c95a7a3xxxxxxxxxxxx
+✔ Snapshot captured
+  Image URL:
+  https://...decrypted-image-url...
+  Message: ok
+```
+
+**示例 - 录制视频：**
+
+```bash
+$ tuya ipc video 6c95a7a3xxxxxxxxxxxx -d 5
+✔ Video captured
+  Video URL:
+  https://...decrypted-video-url...
+  Cover URL:
+  https://...decrypted-cover-url...
+  Message: ok
+```
+
+> 抓拍流程为异步操作：CLI 先分配抓拍任务，等待设备上传，然后轮询直到媒体 URL 就绪。快照轮询通常需要几秒；视频轮询时间取决于录制时长。
+
+---
+
 ## 配置说明
 
 ### 配置文件
@@ -370,6 +419,19 @@ tuya stats config
 tuya stats data <device_id> ele_usage SUM 2025033100 2025033123
 ```
 
+### 场景四：IPC 摄像头抓拍
+
+```bash
+# 拍摄快照
+tuya ipc pic <device_id>
+
+# 录制 5 秒视频
+tuya ipc video <device_id> -d 5
+
+# 获取原始 JSON 用于后续处理
+tuya ipc pic <device_id> --json
+```
+
 ---
 
 ## 支持的控制类型
@@ -381,7 +443,7 @@ tuya stats data <device_id> ele_usage SUM 2025033100 2025033123
 | `value` | 数值调节 | `{"bright_value": 500}` |
 | `string` | 字符串值 | `{"display_text": "Hello"}` |
 
-> 不支持的操作：门锁控制、视频/摄像头操作、图片操作、固件升级、设备配网/移除。这些操作请使用涂鸦 App。
+> 不支持的操作：门锁控制、实时视频流、图片操作、固件升级、设备配网/移除。这些操作请使用涂鸦 App。注意：云端截图/短视频录制已通过 `tuya ipc` 支持。
 
 ---
 
@@ -429,6 +491,7 @@ tuya-smart-control-cli/
 │   │   ├── weather.js       # 天气查询
 │   │   ├── notify.js        # 短信 / 语音 / 邮件 / 推送
 │   │   ├── stats.js         # 数据统计
+│   │   ├── ipc.js           # IPC 摄像头云端抓拍
 │   │   └── doctor.js        # 诊断与连通性检查
 │   └── utils/
 │       └── output.js        # 表格 / 颜色 / 加载动画

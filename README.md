@@ -79,6 +79,7 @@ Commands:
   weather <lat> <lon>            Query weather information
   notify                         Send notifications (self-send)
   stats                          Data statistics
+  ipc                            IPC camera cloud capture
 
 Global Options:
   -V, --version                  Show version number
@@ -280,7 +281,51 @@ tuya stats data 0620068884f3eb414579 ele_usage SUM 2025033100 2025033123
 
 ---
 
-## Configuration
+### `tuya ipc` -- IPC Camera Cloud Capture
+
+```bash
+# Capture a snapshot from a camera
+tuya ipc pic <device_id>
+
+# Capture multiple snapshots
+tuya ipc pic <device_id> --count 3
+
+# Capture without decryption (raw presigned URL)
+tuya ipc pic <device_id> --no-consent
+
+# Record a short video (default 10 seconds)
+tuya ipc video <device_id>
+
+# Record a 5-second video
+tuya ipc video <device_id> -d 5
+
+# Specify home ID
+tuya ipc pic <device_id> --home <home_id>
+```
+
+**Example - Capture snapshot:**
+
+```bash
+$ tuya ipc pic 6c95a7a3xxxxxxxxxxxx
+✔ Snapshot captured
+  Image URL:
+  https://...decrypted-image-url...
+  Message: ok
+```
+
+**Example - Record video:**
+
+```bash
+$ tuya ipc video 6c95a7a3xxxxxxxxxxxx -d 5
+✔ Video captured
+  Video URL:
+  https://...decrypted-video-url...
+  Cover URL:
+  https://...decrypted-cover-url...
+  Message: ok
+```
+
+> The capture flow is asynchronous: the CLI allocates the capture, waits for the device to upload, then polls until the media URL is ready. Snapshot polling typically takes a few seconds; video polling depends on the recording duration.
 
 ### Config File
 
@@ -370,6 +415,19 @@ tuya stats config
 tuya stats data <device_id> ele_usage SUM 2025033100 2025033123
 ```
 
+### 4. Capture from IPC Camera
+
+```bash
+# Take a snapshot
+tuya ipc pic <device_id>
+
+# Record a 5-second video
+tuya ipc video <device_id> -d 5
+
+# Get raw JSON for further processing
+tuya ipc pic <device_id> --json
+```
+
 ---
 
 ## Supported Control Types
@@ -381,7 +439,7 @@ tuya stats data <device_id> ele_usage SUM 2025033100 2025033123
 | `value` | Numeric value | `{"bright_value": 500}` |
 | `string` | Text value | `{"display_text": "Hello"}` |
 
-> Unsupported operations: lock control, video/camera, image operations, firmware upgrades, device pairing/removal. Use the Tuya App for these.
+> Unsupported operations: lock control, live video streaming, image operations, firmware upgrades, device pairing/removal. Use the Tuya App for these. Note: cloud snapshot/short video capture IS supported via `tuya ipc`.
 
 ---
 
@@ -429,6 +487,7 @@ tuya-smart-control-cli/
 │   │   ├── weather.js       # Weather query
 │   │   ├── notify.js        # SMS / voice / email / push
 │   │   ├── stats.js         # Data statistics
+│   │   ├── ipc.js           # IPC camera cloud capture
 │   │   └── doctor.js        # Diagnostics & connectivity check
 │   └── utils/
 │       └── output.js        # Table / color / spinner formatting

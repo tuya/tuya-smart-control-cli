@@ -6,6 +6,7 @@ import { registerDeviceCommand } from './commands/device.js';
 import { registerWeatherCommand } from './commands/weather.js';
 import { registerNotifyCommand } from './commands/notify.js';
 import { registerStatsCommand } from './commands/stats.js';
+import { registerIpcCommand } from './commands/ipc.js';
 import { registerDoctorCommand } from './commands/doctor.js';
 
 const BANNER = `
@@ -28,6 +29,7 @@ registerDeviceCommand(program);
 registerWeatherCommand(program);
 registerNotifyCommand(program);
 registerStatsCommand(program);
+registerIpcCommand(program);
 registerDoctorCommand(program);
 
 // Parse and execute

@@ -150,6 +150,114 @@ class TuyaAPI {
       end_time: endTime,
     });
   }
+
+  // --- IPC Cloud Capture ---
+
+  async ipcCaptureAllocate(deviceId, captureType, { picCount, videoDurationSeconds, homeId } = {}) {
+    const captureParams = { device_id: deviceId, capture_type: captureType };
+    if (picCount != null) captureParams.pic_count = picCount;
+    if (videoDurationSeconds != null) captureParams.video_duration_seconds = videoDurationSeconds;
+    if (homeId != null) captureParams.home_id = homeId;
+    return this._post(
+      `/v1.0/end-user/ipc/${deviceId}/capture/allocate`,
+      { capture_json: JSON.stringify(captureParams) }
+    );
+  }
+
+  async ipcCaptureResolve(deviceId, captureType, bucket, {
+    imageObjectKey, videoObjectKey, coverImageObjectKey,
+    encryptionKey, userPrivacyConsentAccepted, homeId,
+  } = {}) {
+    const resolveParams = { device_id: deviceId, capture_type: captureType, bucket };
+    if (imageObjectKey != null) resolveParams.image_object_key = imageObjectKey;
+    if (videoObjectKey != null) resolveParams.video_object_key = videoObjectKey;
+    if (coverImageObjectKey != null) resolveParams.cover_image_object_key = coverImageObjectKey;
+    if (encryptionKey != null) resolveParams.encryption_key = encryptionKey;
+    if (userPrivacyConsentAccepted != null) resolveParams.user_privacy_consent_accepted = userPrivacyConsentAccepted;
+    if (homeId != null) resolveParams.home_id = homeId;
+    return this._post(
+      `/v1.0/end-user/ipc/${deviceId}/capture/resolve`,
+      { resolve_json: JSON.stringify(resolveParams) }
+    );
+  }
+
+  async ipcPicResolveWithWait(deviceId, allocateResult, { userPrivacyConsentAccepted = true, homeId, pollTimeout = 30, retryCount = 3 } = {}) {
+    const { bucket, image_object_key: imageObjectKey, encryption_key: encryptionKey } = allocateResult;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    await sleep(2000);
+
+    let result;
+    let elapsed = 0;
+    while (elapsed < pollTimeout) {
+      result = await this.ipcCaptureResolve(deviceId, 'PIC', bucket, {
+        imageObjectKey, encryptionKey, userPrivacyConsentAccepted, homeId,
+      });
+      if (result?.status !== 'NOT_READY') return result;
+      await sleep(2000);
+      elapsed += 2;
+    }
+
+    for (let i = 0; i < retryCount; i++) {
+      await sleep(3000);
+      result = await this.ipcCaptureResolve(deviceId, 'PIC', bucket, {
+        imageObjectKey, encryptionKey, userPrivacyConsentAccepted, homeId,
+      });
+      if (result?.status !== 'NOT_READY') return result;
+    }
+
+    return result;
+  }
+
+  async ipcPicAllocateAndFetch(deviceId, { userPrivacyConsentAccepted = true, picCount, homeId } = {}) {
+    const allocateResult = await this.ipcCaptureAllocate(deviceId, 'PIC', { picCount, homeId });
+    const resolveResult = await this.ipcPicResolveWithWait(deviceId, allocateResult, {
+      userPrivacyConsentAccepted, homeId,
+    });
+    return { allocate: allocateResult, resolve: resolveResult };
+  }
+
+  async ipcVideoResolveWithWait(deviceId, allocateResult, { userPrivacyConsentAccepted = true, homeId, pollTimeout = 120, retryCount = 3 } = {}) {
+    const {
+      bucket, video_object_key: videoObjectKey,
+      cover_image_object_key: coverImageObjectKey,
+      encryption_key: encryptionKey,
+      video_duration_seconds_effective: effectiveDuration = 10,
+    } = allocateResult;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const initialWait = Math.max(5, effectiveDuration) + 2;
+    await sleep(initialWait * 1000);
+
+    let result;
+    let elapsed = 0;
+    while (elapsed < pollTimeout) {
+      result = await this.ipcCaptureResolve(deviceId, 'VIDEO', bucket, {
+        videoObjectKey, coverImageObjectKey, encryptionKey, userPrivacyConsentAccepted, homeId,
+      });
+      if (result?.status !== 'NOT_READY') return result;
+      await sleep(2000);
+      elapsed += 2;
+    }
+
+    for (let i = 0; i < retryCount; i++) {
+      await sleep(5000);
+      result = await this.ipcCaptureResolve(deviceId, 'VIDEO', bucket, {
+        videoObjectKey, coverImageObjectKey, encryptionKey, userPrivacyConsentAccepted, homeId,
+      });
+      if (result?.status !== 'NOT_READY') return result;
+    }
+
+    return result;
+  }
+
+  async ipcVideoAllocateAndFetch(deviceId, { videoDurationSeconds = 10, userPrivacyConsentAccepted = true, homeId } = {}) {
+    const allocateResult = await this.ipcCaptureAllocate(deviceId, 'VIDEO', { videoDurationSeconds, homeId });
+    const resolveResult = await this.ipcVideoResolveWithWait(deviceId, allocateResult, {
+      userPrivacyConsentAccepted, homeId,
+    });
+    return { allocate: allocateResult, resolve: resolveResult };
+  }
 }
 
 export function createAPI() {
