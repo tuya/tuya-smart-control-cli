@@ -36,15 +36,15 @@ export TUYA_API_KEY="sk-AYxxxxxxxxxxxx"
 
 Running `tuya init` will guide you through entering your API Key. The region and base URL are auto-detected from the key prefix:
 
-| Prefix | Region | Base URL |
-|--------|--------|----------|
-| `sk-AY...` | China | `https://openapi.tuyacn.com` |
-| `sk-AZ...` | US West | `https://openapi.tuyaus.com` |
-| `sk-EU...` | Central Europe | `https://openapi.tuyaeu.com` |
-| `sk-IN...` | India | `https://openapi.tuyain.com` |
-| `sk-UE...` | US East | `https://openapi-ueaz.tuyaus.com` |
-| `sk-WE...` | Western Europe | `https://openapi-weaz.tuyaeu.com` |
-| `sk-SG...` | Singapore | `https://openapi-sg.iotbing.com` |
+| Prefix | Region | REST API Base URL | WebSocket URI |
+|--------|--------|----------|---------------|
+| `sk-AY...` | China | `https://openapi.tuyacn.com` | `wss://wsmsgs.tuyacn.com` |
+| `sk-AZ...` | US West | `https://openapi.tuyaus.com` | `wss://wsmsgs.iot-wus.com` |
+| `sk-EU...` | Central Europe | `https://openapi.tuyaeu.com` | `wss://wsmsgs.iot-eu.com` |
+| `sk-IN...` | India | `https://openapi.tuyain.com` | `wss://wsmsgs.iot-ap.com` |
+| `sk-UE...` | US East | `https://openapi-ueaz.tuyaus.com` | `wss://wsmsgs.iot-eus.com` |
+| `sk-WE...` | Western Europe | `https://openapi-weaz.tuyaeu.com` | `wss://wsmsgs.iot-weu.com` |
+| `sk-SG...` | Singapore | `https://openapi-sg.iotbing.com` | `wss://wsmsgs.iot-sea.com` |
 
 ### Verify
 
@@ -80,6 +80,7 @@ Commands:
   notify                         Send notifications (self-send)
   stats                          Data statistics
   ipc                            IPC camera cloud capture
+  subscribe                      Subscribe to real-time device events
 
 Global Options:
   -V, --version                  Show version number
@@ -327,6 +328,72 @@ $ tuya ipc video 6c95a7a3xxxxxxxxxxxx -d 5
 
 > The capture flow is asynchronous: the CLI allocates the capture, waits for the device to upload, then polls until the media URL is ready. Snapshot polling typically takes a few seconds; video polling depends on the recording duration.
 
+---
+
+### `tuya subscribe` -- Real-Time Device Events
+
+Subscribe to device property changes and online/offline status events via WebSocket. The connection stays open and prints events as they arrive.
+
+```bash
+# Subscribe to all events from all devices
+tuya subscribe
+
+# Subscribe to specific devices only
+tuya subscribe -d <device_id_1> -d <device_id_2>
+
+# Subscribe to property changes only
+tuya subscribe --event property
+
+# Subscribe to online/offline status only
+tuya subscribe --event status
+
+# Output as JSON (one event per line, for piping)
+tuya subscribe --json
+tuya subscribe --json | jq '.data.devId'
+```
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-d, --device <id...>` | Filter by one or more device IDs | All devices |
+| `-e, --event <type>` | Event type: `all`, `property`, `status` | `all` |
+| `--json` | Output raw JSON per event line | Pretty print |
+
+**Example - Property changes:**
+
+```
+$ tuya subscribe --event property
+ℹ Connected to wss://wsmsgs.tuyacn.com
+  Listening for device events... Press Ctrl+C to stop.
+
+[2026-04-16 08:30:12.000] property 0620068884f3eb414579 switch_led = on
+[2026-04-16 08:30:12.000] property 0620068884f3eb414579 bright_value = 500
+[2026-04-16 08:31:45.000] property 1830045562a1bc223456 temp_set = 26
+```
+
+**Example - Online/offline status:**
+
+```
+$ tuya subscribe --event status
+ℹ Connected to wss://wsmsgs.tuyacn.com
+  Listening for device events... Press Ctrl+C to stop.
+
+[2026-04-16 08:35:02.000] status   2940012345b6de789012 ○ offline
+[2026-04-16 08:36:15.000] status   2940012345b6de789012 ● online
+```
+
+**Example - JSON output for scripting:**
+
+```bash
+$ tuya subscribe --json -d 0620068884f3eb414579
+{"data":{"devId":"0620068884f3eb414579","status":[{"code":"switch_led","value":true,"time":1773668532000}]},"eventType":"devicePropertyChange"}
+```
+
+> The WebSocket URI is auto-detected from the API key prefix (same mapping as the REST API). The connection automatically reconnects on transient failures and stops on fatal close codes (1002, 1003, 1008, 1011).
+
+---
+
 ### Config File
 
 Credentials are stored at `~/.tuya-cli/config.json`:
@@ -428,6 +495,22 @@ tuya ipc video <device_id> -d 5
 tuya ipc pic <device_id> --json
 ```
 
+### 5. Monitor Device Events in Real Time
+
+```bash
+# Watch all device events
+tuya subscribe
+
+# Monitor only a specific device
+tuya subscribe -d <device_id>
+
+# Monitor only online/offline status changes
+tuya subscribe --event status
+
+# Pipe JSON events to another tool
+tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
+```
+
 ---
 
 ## Supported Control Types
@@ -488,6 +571,7 @@ tuya-smart-control-cli/
 │   │   ├── notify.js        # SMS / voice / email / push
 │   │   ├── stats.js         # Data statistics
 │   │   ├── ipc.js           # IPC camera cloud capture
+│   │   ├── subscribe.js     # Real-time device event subscription
 │   │   └── doctor.js        # Diagnostics & connectivity check
 │   └── utils/
 │       └── output.js        # Table / color / spinner formatting

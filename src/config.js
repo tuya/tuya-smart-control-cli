@@ -16,6 +16,17 @@ const PREFIX_TO_BASE_URL = {
   SG: 'https://openapi-sg.iotbing.com',
 };
 
+// API key prefix -> WebSocket URI mapping
+const PREFIX_TO_WS_URI = {
+  AY: 'wss://wsmsgs.tuyacn.com',
+  AZ: 'wss://wsmsgs.iot-wus.com',
+  EU: 'wss://wsmsgs.iot-eu.com',
+  IN: 'wss://wsmsgs.iot-ap.com',
+  UE: 'wss://wsmsgs.iot-eus.com',
+  WE: 'wss://wsmsgs.iot-weu.com',
+  SG: 'wss://wsmsgs.iot-sea.com',
+};
+
 function ensureConfigDir() {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
@@ -30,6 +41,18 @@ export function resolveBaseUrl(apiKey) {
   const prefix = key.slice(0, 2).toUpperCase();
   if (PREFIX_TO_BASE_URL[prefix]) {
     return PREFIX_TO_BASE_URL[prefix];
+  }
+  return null;
+}
+
+export function resolveWsUri(apiKey) {
+  let key = apiKey;
+  if (key.startsWith('sk-')) {
+    key = key.slice(3);
+  }
+  const prefix = key.slice(0, 2).toUpperCase();
+  if (PREFIX_TO_WS_URI[prefix]) {
+    return PREFIX_TO_WS_URI[prefix];
   }
   return null;
 }
@@ -81,4 +104,4 @@ export function getBaseUrl() {
   return null;
 }
 
-export { CONFIG_DIR, CONFIG_FILE, PREFIX_TO_BASE_URL };
+export { CONFIG_DIR, CONFIG_FILE, PREFIX_TO_BASE_URL, PREFIX_TO_WS_URI };

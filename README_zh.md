@@ -36,15 +36,15 @@ export TUYA_API_KEY="sk-AYxxxxxxxxxxxx"
 
 运行 `tuya init` 会引导你输入 API Key，系统根据 Key 前缀自动识别区域和服务地址：
 
-| 前缀 | 区域 | 服务地址 |
-|------|------|----------|
-| `sk-AY...` | 中国 | `https://openapi.tuyacn.com` |
-| `sk-AZ...` | 美西 | `https://openapi.tuyaus.com` |
-| `sk-EU...` | 中欧 | `https://openapi.tuyaeu.com` |
-| `sk-IN...` | 印度 | `https://openapi.tuyain.com` |
-| `sk-UE...` | 美东 | `https://openapi-ueaz.tuyaus.com` |
-| `sk-WE...` | 西欧 | `https://openapi-weaz.tuyaeu.com` |
-| `sk-SG...` | 新加坡 | `https://openapi-sg.iotbing.com` |
+| 前缀 | 区域 | REST API 服务地址 | WebSocket 地址 |
+|------|------|----------|---------------|
+| `sk-AY...` | 中国 | `https://openapi.tuyacn.com` | `wss://wsmsgs.tuyacn.com` |
+| `sk-AZ...` | 美西 | `https://openapi.tuyaus.com` | `wss://wsmsgs.iot-wus.com` |
+| `sk-EU...` | 中欧 | `https://openapi.tuyaeu.com` | `wss://wsmsgs.iot-eu.com` |
+| `sk-IN...` | 印度 | `https://openapi.tuyain.com` | `wss://wsmsgs.iot-ap.com` |
+| `sk-UE...` | 美东 | `https://openapi-ueaz.tuyaus.com` | `wss://wsmsgs.iot-eus.com` |
+| `sk-WE...` | 西欧 | `https://openapi-weaz.tuyaeu.com` | `wss://wsmsgs.iot-weu.com` |
+| `sk-SG...` | 新加坡 | `https://openapi-sg.iotbing.com` | `wss://wsmsgs.iot-sea.com` |
 
 ### 验证
 
@@ -80,6 +80,7 @@ tuya <command> [subcommand] [options]
   notify                         发送通知（仅限自发自收）
   stats                          数据统计
   ipc                            IPC 摄像头云端抓拍
+  subscribe                      订阅设备实时事件
 
 全局选项:
   -V, --version                  显示版本号
@@ -329,6 +330,70 @@ $ tuya ipc video 6c95a7a3xxxxxxxxxxxx -d 5
 
 ---
 
+### `tuya subscribe` -- 设备实时事件订阅
+
+通过 WebSocket 订阅设备属性变化和上下线状态事件。连接保持打开，事件到达时实时输出。
+
+```bash
+# 订阅所有设备的所有事件
+tuya subscribe
+
+# 只订阅指定设备
+tuya subscribe -d <device_id_1> -d <device_id_2>
+
+# 只订阅属性变化
+tuya subscribe --event property
+
+# 只订阅上下线状态
+tuya subscribe --event status
+
+# 输出 JSON 格式（每行一个事件，便于管道处理）
+tuya subscribe --json
+tuya subscribe --json | jq '.data.devId'
+```
+
+**选项：**
+
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `-d, --device <id...>` | 按设备 ID 过滤（可指定多个） | 所有设备 |
+| `-e, --event <type>` | 事件类型：`all`、`property`、`status` | `all` |
+| `--json` | 每行输出原始 JSON | 格式化输出 |
+
+**示例 - 属性变化：**
+
+```
+$ tuya subscribe --event property
+ℹ Connected to wss://wsmsgs.tuyacn.com
+  Listening for device events... Press Ctrl+C to stop.
+
+[2026-04-16 08:30:12.000] property 0620068884f3eb414579 switch_led = on
+[2026-04-16 08:30:12.000] property 0620068884f3eb414579 bright_value = 500
+[2026-04-16 08:31:45.000] property 1830045562a1bc223456 temp_set = 26
+```
+
+**示例 - 上下线状态：**
+
+```
+$ tuya subscribe --event status
+ℹ Connected to wss://wsmsgs.tuyacn.com
+  Listening for device events... Press Ctrl+C to stop.
+
+[2026-04-16 08:35:02.000] status   2940012345b6de789012 ○ offline
+[2026-04-16 08:36:15.000] status   2940012345b6de789012 ● online
+```
+
+**示例 - JSON 输出用于脚本处理：**
+
+```bash
+$ tuya subscribe --json -d 0620068884f3eb414579
+{"data":{"devId":"0620068884f3eb414579","status":[{"code":"switch_led","value":true,"time":1773668532000}]},"eventType":"devicePropertyChange"}
+```
+
+> WebSocket 地址根据 API Key 前缀自动识别（与 REST API 相同的映射关系）。连接在短暂断开后自动重连，遇到致命关闭码（1002、1003、1008、1011）时停止。
+
+---
+
 ## 配置说明
 
 ### 配置文件
@@ -432,6 +497,22 @@ tuya ipc video <device_id> -d 5
 tuya ipc pic <device_id> --json
 ```
 
+### 场景五：实时监控设备事件
+
+```bash
+# 监听所有设备事件
+tuya subscribe
+
+# 只监听指定设备
+tuya subscribe -d <device_id>
+
+# 只监听上下线状态
+tuya subscribe --event status
+
+# 将 JSON 事件传给其他工具处理
+tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
+```
+
 ---
 
 ## 支持的控制类型
@@ -492,6 +573,7 @@ tuya-smart-control-cli/
 │   │   ├── notify.js        # 短信 / 语音 / 邮件 / 推送
 │   │   ├── stats.js         # 数据统计
 │   │   ├── ipc.js           # IPC 摄像头云端抓拍
+│   │   ├── subscribe.js     # 设备实时事件订阅
 │   │   └── doctor.js        # 诊断与连通性检查
 │   └── utils/
 │       └── output.js        # 表格 / 颜色 / 加载动画

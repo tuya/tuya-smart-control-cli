@@ -17,7 +17,8 @@
     "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "inquirer": "^12.6.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "ws": "^8.18.0"
   },
   "keywords": [
     "tuya",

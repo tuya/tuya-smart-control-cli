@@ -8,6 +8,7 @@ import { registerNotifyCommand } from './commands/notify.js';
 import { registerStatsCommand } from './commands/stats.js';
 import { registerIpcCommand } from './commands/ipc.js';
 import { registerDoctorCommand } from './commands/doctor.js';
+import { registerSubscribeCommand } from './commands/subscribe.js';
 
 const BANNER = `
   ${chalk.cyan.bold('Tuya Smart Control CLI')}
@@ -30,6 +31,7 @@ registerWeatherCommand(program);
 registerNotifyCommand(program);
 registerStatsCommand(program);
 registerIpcCommand(program);
+registerSubscribeCommand(program);
 registerDoctorCommand(program);
 
 // Parse and execute
