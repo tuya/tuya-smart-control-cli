@@ -511,6 +511,35 @@ tuya subscribe --event status
 tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
 ```
 
+### 6. Debug a Device
+
+Use these steps when a device misbehaves in the app or in another integration (for example Home Assistant), or when you need its datapoints.
+
+```bash
+# Step 1: Check the key, region and connection
+tuya doctor
+
+# Step 2: Confirm the key can see the device
+tuya device list --json | grep -A3 <device_id>
+
+# Step 3: Read its current state
+tuya device detail <device_id> --json
+
+# Step 4: Read its full Thing Model (every datapoint it declares)
+tuya device model <device_id> --json
+
+# Step 5: Watch live reports while you use the device in the app
+tuya subscribe -d <device_id> --json
+```
+
+How to read the output:
+
+- In `tuya device model --json`, each entry in `properties` is one datapoint. `abilityId` is the datapoint (DP) ID, `code` is the property code used by `tuya device control`, `accessMode` is `rw` (controllable) or `ro` (report only), and `typeSpec` gives the type, range, step, unit or allowed values.
+- `tuya subscribe` shows which properties actually change, and their values, when you operate the device from the app or by hand. Change one setting at a time so each event is easy to match.
+- Save the output to a file when you need to share it (for example in a bug report): `tuya device model <device_id> --json > model.json`. Remove device IDs first if you don't want to share them.
+
+> The API Key belongs to one app account. Tuya Smart and Smart Life are separate apps with separate accounts, so a key only sees devices in homes of the account it was created for. If a device is missing from `tuya device list`, or a device command such as `tuya device model` fails with code `40000905`, check which app and account the device was added with and use a key for that account.
+
 ---
 
 ## Supported Control Types
@@ -545,6 +574,7 @@ tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
 | 1108 | URI path invalid | Verify base URL matches your region |
 | 40000901 | Device not found | Check device ID |
 | 40000903 | Device model not found | Device may not support Thing Model |
+| 40000905 | The user does not have device permissions | The device is not in a home of this API Key's account. Check that the key was created for the account that owns the device (Tuya Smart and Smart Life accounts are separate) |
 
 ### Need Help?
 

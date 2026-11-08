@@ -513,6 +513,35 @@ tuya subscribe --event status
 tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
 ```
 
+### 场景六：排查设备问题
+
+当设备在 App 或其他集成（例如 Home Assistant）中表现异常，或者需要查看设备的数据点时，可按以下步骤排查。
+
+```bash
+# 第一步：检查 API Key、区域和连接
+tuya doctor
+
+# 第二步：确认当前 Key 能看到该设备
+tuya device list --json | grep -A3 <device_id>
+
+# 第三步：查看设备当前状态
+tuya device detail <device_id> --json
+
+# 第四步：查看完整物模型（设备声明的所有数据点）
+tuya device model <device_id> --json
+
+# 第五步：在 App 中操作设备的同时监听实时上报
+tuya subscribe -d <device_id> --json
+```
+
+输出说明：
+
+- 在 `tuya device model --json` 中，`properties` 里的每一项是一个数据点。`abilityId` 是数据点（DP）ID，`code` 是 `tuya device control` 使用的属性编码，`accessMode` 为 `rw`（可控制）或 `ro`（仅上报），`typeSpec` 给出类型、范围、步长、单位或可选值。
+- `tuya subscribe` 显示在 App 中或手动操作设备时哪些属性实际发生了变化以及对应的值。每次只改一个设置，便于对应每条事件。
+- 需要分享输出（例如提交问题报告）时可保存到文件：`tuya device model <device_id> --json > model.json`。如不希望公开设备 ID，请先将其删除。
+
+> API Key 属于单个 App 账号。涂鸦智能（Tuya Smart）和智能生活（Smart Life）是两个独立的 App，账号互不相通，因此 Key 只能看到其所属账号家庭中的设备。如果 `tuya device list` 中没有某个设备，或 `tuya device model` 等设备命令返回错误码 `40000905`，请确认设备是用哪个 App 和账号添加的，并使用该账号的 Key。
+
 ---
 
 ## 支持的控制类型
@@ -547,6 +576,7 @@ tuya subscribe --json | jq 'select(.eventType == "devicePropertyChange")'
 | 1108 | URI 路径无效 | 确认服务地址与账号区域匹配 |
 | 40000901 | 设备不存在 | 检查设备 ID 是否正确 |
 | 40000903 | 设备物模型不存在 | 该设备可能不支持物模型查询 |
+| 40000905 | 用户没有设备权限 | 设备不在该 API Key 所属账号的家庭中。请确认 Key 是用拥有该设备的账号创建的（涂鸦智能与智能生活账号相互独立） |
 
 ### 获取帮助
 
